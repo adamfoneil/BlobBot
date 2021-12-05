@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using BlobBot.Shared.Interfaces;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 #nullable disable
@@ -17,23 +18,19 @@ namespace BlobBot.Shared.Models
     /// a database table inserted by Azure EventGrid whenever a blob is created
     /// </summary>
     [Table("BlobCreated", Schema = "eventgrid")]        
-    public class BlobCreated
+    public class BlobCreated : IBlobInfo
     {
         [Key]
-        public long Id { get; set; }    
-        [MaxLength(60)]
-        [Required]
+        public long Id { get; set; }
         public string Container { get; set; }
-        [MaxLength(512)]
-        [Required]
         public string Name { get; set; }
         public DateTime DateCreated { get; set; }
         public long Length { get; set; }
-        [MaxLength(60)]
-        public string ContentType { get; set; }        
-        public Status Status { get; set; }
-        [MaxLength(60)]
+        public string ContentType { get; set; }
+        public Interfaces.Status Status { get; set; }
         public string ProcessedBy { get; set; }
+        public DateTime? StatusDateTime { get; set; }
+        public string ErrorMessage { get; set; }
     }
 
     /// <summary>

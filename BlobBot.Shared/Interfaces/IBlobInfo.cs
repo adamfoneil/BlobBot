@@ -2,7 +2,7 @@
 {
     public enum Status
     {
-        New,
+        New = 0,
         Downloading,
         Processing,
         Succeeded,

@@ -1,4 +1,5 @@
-﻿using BlobBot.Shared.Interfaces;
+﻿using Azure.Storage.Blobs;
+using BlobBot.Shared.Interfaces;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -32,6 +33,10 @@ namespace BlobBot.Client
             await base.StopAsync(cancellationToken);
             _running = false;
         }
+
+        protected abstract Task<string> GetStorageConnectionStringAsync();
+
+        protected abstract string GetLocalFilename(IBlobInfo blobInfo);
 
         protected abstract Task<IEnumerable<IBlobInfo>> GetNewBlobsAsync();
 
@@ -68,7 +73,7 @@ namespace BlobBot.Client
 
                         try
                         {
-                            await ProcessBlobAsync(download.localFile, blob);
+                            await ProcessBlobAsync(download.result, blob);
                             blob.Status = Status.Succeeded;                            
                         }
                         catch (Exception exc)
@@ -80,7 +85,7 @@ namespace BlobBot.Client
                     else
                     {
                         blob.Status = Status.DownloadFailed;
-                        blob.ErrorMessage = download.errorMessage;
+                        blob.ErrorMessage = download.result;
                     }
 
                     blob.StatusDateTime = DateTime.UtcNow;
@@ -89,9 +94,25 @@ namespace BlobBot.Client
             }
         }
 
-        private Task<(bool success, string errorMessage, string localFile)> DownloadAsync(IBlobInfo blob, CancellationToken stoppingToken)
+        private async Task<(bool success, string result)> DownloadAsync(IBlobInfo blob, CancellationToken stoppingToken)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var connectionString = await GetStorageConnectionStringAsync();
+                var blobClient = new BlobClient(connectionString, blob.Container, blob.Name);
+
+                var fileName = GetLocalFilename(blob);
+                using var output = File.Create(fileName);
+                await blobClient.DownloadToAsync(output, stoppingToken);
+
+                if (stoppingToken.IsCancellationRequested) return (false, "canceled");
+
+                return (true, fileName);
+            }
+            catch (Exception exc)
+            {
+                return (false, exc.Message);
+            }            
         }
     }
 }
